@@ -8,6 +8,7 @@ import { ensureDirSync } from "https://deno.land/std/fs/mod.ts";
 export async function buildAndroid(buildDir: string, keyStoreFile: string, storepass: string) {
     try {
         console.log(colors.brightBlue('Starting android build:'), buildDir);
+        const buildStart = new Date().getTime();
 
         const sh = new AndroidBuildShell();
         sh.cwd = buildDir;
@@ -27,7 +28,8 @@ export async function buildAndroid(buildDir: string, keyStoreFile: string, store
         await sh.checkOrCreateKeyStore(keyStoreFile); // android-myth
         await sh.jarsigner(keyStoreFile, storepass);
         await sh.createApk();
-        // console.log(await sh.zipalign(this.UNALIGNED_NAME, this.APK_NAME));
+        
+        console.log('Built within '+(Math.ceil(new Date().getTime() - buildStart) / 1000)+' seconds '+String.fromCodePoint(0x1F44F));
     } catch(e) {
         console.error(e);
     }
@@ -130,15 +132,15 @@ class AndroidBuildShell {
         // p.push('-F', 'bin/resources.ap_');
         p.push('-F', this.UNALIGNED_NAME);
 
-        console.log(await this.aapt(p));
-        console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
+        await this.aapt(p);
+        await this.aapt(['list', this.UNALIGNED_NAME]);
     }
 
     async addDexToApk() {
         //$ aapt add 
-        console.log(await this.aapt([
+        await this.aapt([
             'add', this.UNALIGNED_NAME, 'classes.dex'
-        ]));
+        ]);
         console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
@@ -168,7 +170,7 @@ class AndroidBuildShell {
     }
 
     async createApk() {
-        console.log(await this.zipalign(this.UNALIGNED_NAME, this.APK_NAME));
+        await this.zipalign(this.UNALIGNED_NAME, this.APK_NAME);
         const apk = path.join(this.cwd, this.APK_NAME);
         if(existsSync(apk)) {
             const stat = await Deno.stat(apk);
@@ -192,9 +194,9 @@ class AndroidBuildShell {
             name
         ];
         // console.log(cmd.join(' '));
-        console.log((await this.run(cmd, {
+        await this.run(cmd, {
             cwd: keyStoreDir
-        })).output);
+        });
     }
 
     async compileClasses() {
