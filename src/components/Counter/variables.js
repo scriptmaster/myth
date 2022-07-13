@@ -1,0 +1,1 @@
+const count = this.count;

@@ -1,0 +1,78 @@
+/*! site css | https://msheriff.com | Proprietary License */
+html,
+body,
+.block {
+    height: 100%
+}
+
+nav {
+    background: #55acee;
+    height: 56px;
+    line-height: 56px
+}
+
+nav a.brand-logo {
+    font-size: 1.6rem
+}
+
+.gbg {
+    background: linear-gradient(222deg, #5acfe8 25%, #6186db 100%);
+    position: relative;
+    overflow: hidden
+}
+
+.gbg b {
+    background: #008000;
+    display: block;
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 1000px
+}
+
+.gbg b:nth-child(1) {
+    position: absolute;
+    width: 1000px;
+    height: 1000px;
+    left: -128px;
+    top: 140px;
+    background: linear-gradient(180deg, #5acfe8 40%, #7c5ae8 100%);
+    filter: blur(260px)
+}
+
+.gbg b:nth-child(2) {
+    background: #00f;
+    width: 1000px;
+    height: 1000px;
+    right: -100px;
+    top: -200px;
+    background: linear-gradient(180deg, #5acfe8 10%, #7c5ae8 100%);
+    filter: blur(260px);
+    transform: rotate(-180deg)
+}
+
+.gbg b:nth-child(3) {
+    width: 360px;
+    height: 360px;
+    left: 50px;
+    bottom: 100px;
+    transform: rotate(-170deg);
+    background: linear-gradient(112.37deg, rgba(255, 255, 255, .48) 0%, rgba(255, 255, 255, .12) 100%);
+    backdrop-filter: blur(100px);
+    border: 1px solid #aba
+}
+
+.gbg b:nth-child(4) {
+    background: #4b0082;
+    right: 50px;
+    top: 50px;
+    width: 260px;
+    height: 260px;
+    background: linear-gradient(112.37deg, rgba(255, 255, 255, .48) 0%, rgba(255, 255, 255, .12) 100%);
+    backdrop-filter: blur(100px)
+}
+
+main {
+    position: relative;
+    z-index: 10;
+}

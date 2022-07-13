@@ -1,0 +1,32 @@
+{
+    "root": "src",
+    "dist": "dist",
+    "minify": false,
+    "hashing": true,
+
+    "assets": "assets",
+    "components": "components",
+    "routes": "pages",
+    "assetsExclude": "exclude|node_modules",
+
+    "builds": ["mithril", "android", "html", "razor", "wp", "ios"],
+
+    "vendorDir": "lib",
+    "vendorIncludes": {
+        "mithril": ["mithril.js"]
+    },
+
+    "install": {
+        "mithril.js": "https://unpkg.com/mithril@2.2.2/mithril.min.js",
+        "js/materialize.min.js": "https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"
+    },
+
+    "downloadAssets": {
+        "css/materialize.css": "https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css",
+        "js/materialize.min.js": "https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js",
+        "js/alpine.min.js": "https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.2/cdn.min.js"
+    },
+
+    "mount": "document.querySelector('#myth')",
+    "port": 5000
+}

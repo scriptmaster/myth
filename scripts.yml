@@ -1,0 +1,15 @@
+watcher:
+  interval: 350,
+  match:
+    - myth.json
+    - myth-cli.ts
+
+scripts:
+  start:
+    cmd: myth-cli.ts
+    allow:
+      - read
+      - run
+      - net
+      - write
+      - env
