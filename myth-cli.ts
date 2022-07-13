@@ -49,6 +49,8 @@ const defaultConfig = {
 
 	//generate: "../Pages/Generated/",
     //generate_templates: ["razor_pages", "html"]
+	android_keystore: 'android.keystore',
+	android_storepass: 'android-myth',
 };
 
 var config = Object.assign({}, defaultConfig);
@@ -559,7 +561,7 @@ async function build(opts:any = {}) {
 			case 'spa':
 				await bundleWeb('mithril'); break;
 			case 'android':
-				await buildAndroid(copybuild('android'));
+				await buildAndroid(copybuild('android'), config.android_keystore, config.android_storepass);
 				break;
 			case 'html':
 			case 'www':

@@ -28,5 +28,8 @@
     },
 
     "mount": "document.querySelector('#myth')",
-    "port": 5000
+    "port": 5000,
+
+    "android_keystore": "android.keystore",
+    "android_storepass": "android-myth"
 }

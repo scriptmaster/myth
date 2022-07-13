@@ -1,4 +1,4 @@
-package com.msheriff.kingdom;
+package com.msheriff.kingdom.MainActivity;
 
 import android.app.Activity;
 import android.os.Bundle;
