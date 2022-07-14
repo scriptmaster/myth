@@ -138,9 +138,15 @@ class AndroidBuildShell {
 
     async addDexToApk(dexFile: string) {
         //$ aapt add 
+        const dexFilePath = path.join(this.cwd, dexFile); // Add any relative paths
+        const dexCwd = path.dirname(dexFilePath);
+        const unalignedFile = path.relative(dexCwd, path.join(this.cwd, this.UNALIGNED_NAME));
+
+        // console.log(dexCwd, this.cwd, unalignedFile, dexFilePath);
+
         await this.aapt([
-            'add', this.UNALIGNED_NAME, dexFile
-        ]);
+            'add', unalignedFile, path.basename(dexFile)
+        ], '');
         // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
@@ -208,7 +214,7 @@ class AndroidBuildShell {
 
         const sourceFiles = getSourceFiles(this.cwd, /\.java$/).map(f => path.relative(this.cwd, f));
         // console.log('sourceFiles:', sourceFiles);
-        
+
         await this.javac([
             '-classpath', this.ANDROID_JAR,
             // '-sourcepath', sourcepath, // 'gen;java'
@@ -264,8 +270,8 @@ class AndroidBuildShell {
 
     devices() { return this.adb('devices'); }
 
-    async aapt(commands: string[]) {
-        return `aapt ${commands[0]}:\n` + (await this.run(['aapt', ...commands], {PATH: this.BUILD_PATH})).output;
+    async aapt(commands: string[], cwd: string = '') {
+        return `aapt ${commands[0]}:\n` + (await this.run(['aapt', ...commands], {PATH: this.BUILD_PATH, cwd })).output;
     }
 
     async javac(commands: string[]) {
