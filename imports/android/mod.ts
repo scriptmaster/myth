@@ -23,14 +23,16 @@ export async function buildAndroid(buildDir: string, keyStoreFile: string, store
         // sh.devices();
         // sh.aapt(['version']);
         await sh.generateResources();
-        await sh.compileClasses();
-        await sh.outputClassesDex();
-        await sh.addDexToApk();
+
+        await sh.compileClasses('obj/');
+        await sh.outputClassesDex('obj/');
+
+        await sh.addDexToApk('classes.dex');
 
         await sh.alignApk();
 
         await sh.checkOrCreateKeyStore(keyStoreFile); // android-myth
-        await sh.jarsigner(keyStoreFile, storepass);
+        await sh.jarsigner(sh.APK_NAME, keyStoreFile, storepass);
         await sh.checkApk();
 
         console.log('Built within '+(Math.ceil(new Date().getTime() - buildStart) / 1000)+' seconds '+String.fromCodePoint(0x1F44F));
@@ -39,16 +41,7 @@ export async function buildAndroid(buildDir: string, keyStoreFile: string, store
     }
 }
 
-// export async function prepareKeyStore(keyStoreDir: string) {
-//     // 
-// }
-
-// export async function signKey(keyStoreDir: string) {
-//     // 
-// }
-
-
-function ensuredir(dir: string) { try { ensureDirSync(dir); } catch(e) { if(e.code != "EEXIST") { throw e; } } return dir; };
+// function ensuredirInCwd(dir: string) { try { ensureDirSync(dir); } catch(e) { if(e.code != "EEXIST") { throw e; } } return dir; };
 function getSourceFiles(dir: string, filter = /\.java$/) {
     const files: string[] = [];
     for (const entry of Deno.readDirSync(dir)) {
@@ -79,6 +72,8 @@ class AndroidBuildShell {
 
     UNALIGNED_NAME = 'unaligned.apk';
     APK_NAME = '';
+
+    //DEX_DIR = 'bin';
 
     constructor() {
         this.ANDROID_SDK = Deno.env.get("ANDROID_SDK") || '';
@@ -115,12 +110,13 @@ class AndroidBuildShell {
         this.APK_NAME = 'signed.apk';
         // this.APK_NAME = 'release.apk';
     }
-    // setDir(cwd: string) { this.cwd = cwd; }
+
+    ensuredir(dir: string) { try { ensureDirSync(path.join(this.cwd, dir)); } catch(e) { if(e.code != "EEXIST") { throw e; } } return dir; };
 
     async generateResources() {
         //$ aapt package -m -J gen/ -M ./AndroidManifest.xml -S res1/ -S res2 ... -I android.jar
         const generated = 'gen/';
-        ensuredir(path.join(this.cwd, generated));
+        this.ensuredir(generated);
         // ensuredir(path.join(this.cwd, 'bin/'));
 
         var p = [];
@@ -140,17 +136,17 @@ class AndroidBuildShell {
         // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
-    async addDexToApk() {
+    async addDexToApk(dexFile: string) {
         //$ aapt add 
         await this.aapt([
-            'add', this.UNALIGNED_NAME, 'classes.dex'
+            'add', this.UNALIGNED_NAME, dexFile
         ]);
         // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
     async checkOrCreateKeyStore(keyStoreFile: string) {
         const keyStoreDir = path.dirname(keyStoreFile);
-        if(!existsSync(keyStoreDir)) ensuredir(keyStoreDir);
+        if(!existsSync(keyStoreDir)) ensureDirSync(keyStoreDir);
         if(!existsSync(keyStoreFile)) {
             const name = path.basename(keyStoreFile);
             // %JAVABIN%\keytool  -genkey -v -keystore  my-release-key.keystore -alias alias_name  -keyalg RSA -keysize 2048  -validity 10000
@@ -190,14 +186,14 @@ class AndroidBuildShell {
         }
     }
 
-    async jarsigner(keyStoreFile: string, storepass: string) {
+    async jarsigner(file: string, keyStoreFile: string, storepass: string) {
         const keyStoreDir = path.dirname(keyStoreFile);
         const name = path.basename(keyStoreFile);
         const cmd = [
             'jarsigner',
             '-keystore', name,
             '-storepass', storepass,
-            path.relative(keyStoreDir, path.join(this.cwd, this.APK_NAME)),
+            path.relative(keyStoreDir, path.join(this.cwd, file)),
             name
         ];
         // console.log(cmd.join(' '));
@@ -206,16 +202,17 @@ class AndroidBuildShell {
         });
     }
 
-    async compileClasses() {
-        ensuredir(path.join(this.cwd, 'bin/'));
+    async compileClasses(output: string) {
+        // ensuredir(path.join(this.cwd, 'bin/'));
+        this.ensuredir(output);
 
         const sourceFiles = getSourceFiles(this.cwd, /\.java$/).map(f => path.relative(this.cwd, f));
         // console.log('sourceFiles:', sourceFiles);
         
         await this.javac([
             '-classpath', this.ANDROID_JAR,
-            '-sourcepath', 'gen;java',
-            '-d', 'bin',
+            // '-sourcepath', sourcepath, // 'gen;java'
+            '-d', output,
             //'-target', '1.7',
             //'-source', '1.7',
             // 'gen\\com\\msheriff\\kingdom\\R.java',
@@ -224,25 +221,46 @@ class AndroidBuildShell {
         ]);
     }
 
-    async outputClassesDex() {
+    async getPackages() {
+        // 
+    }
+
+    async downloadAARorJAR() {
+        // 
+    }
+
+    async outputClassesDex(input: string) {
         // $(DX) --dex --output=classes.dex bin
         // https://r8.googlesource.com/r8
         // $(D8) --output classes.dex input-file1 input-file2
-        // await this.dx([
-        //     //'--dex',
-        //     '--output=classes.dex',
-        //     ...getSourceFiles(this.cwd, /\.class$/).map(f => f.substring(this.cwd.length+1))
-        // ]);
+        // this.ensuredir(this.DEX_DIR);
 
-        const classFiles = getSourceFiles(this.cwd, /\.class$/).map(f => path.relative(this.cwd, f));
+        const classFiles = getSourceFiles(path.join(this.cwd, input), /\.class$/).map(f => path.relative(this.cwd, f));
         // console.log(classFiles);
 
         await this.d8([
-            '--output', '.',
+            '--output', '.', // this.DEX_DIR,
             // 'bin\\com\\msheriff\\kingdom\\*.class'
             ...classFiles
         ]);
     }
+
+    // DONT DO THIS - THIS PROCESS IS WAAAYYYY TOO SLOW //
+    async jar_dex_move(input: string, name: string) {
+        // jar_dex_move('obj', 'libs_r');
+        // ensureDirSync(this.DEX_DIR);
+        // jar: $CMD_JAR --create --file bin/libs_r.jar -C 'obj/' .
+        // dexes should be added to root in apk: // await this.jar(`--create --file ${this.DEX_DIR}/${name}.jar -C ${input} .`.split(' '));
+        await this.jar(`--create --file ${name}.jar -C ${input} .`.split(' '));
+        // dex: $CMD_D8 --intermediate lib/libs.jar --classpath $PLATFORM_DIR/android.jar --output lib/
+        // dexes should be added to root in apk: // await this.d8(`--intermediate ${this.DEX_DIR}/${name}.jar --classpath ${this.ANDROID_JAR} --output ${this.DEX_DIR}/`.split(' '));
+        await this.d8(`--intermediate ${name}.jar --classpath ${this.ANDROID_JAR} --output .`.split(' '));
+        // rename: mv 
+        // this.rename(this.DEX_DIR+'/classes.dex', this.DEX_DIR+'/'+name+'.dex');
+        this.rename('classes.dex', name+'.dex');
+    }
+
+    rename(oldir: string, newdir: string) { return Deno.renameSync(path.join(this.cwd, oldir), path.join(this.cwd, newdir)); }
 
     devices() { return this.adb('devices'); }
 
@@ -256,6 +274,10 @@ class AndroidBuildShell {
 
     async dx(commands: string[]) {
         return 'dx: ' + (await this.run([this.PATH_DX, ...commands], {PATH: this.BUILD_PATH})).output;
+    }
+
+    async jar(commands: string[]) {
+        return 'jar: ' + (await this.run(['jar', ...commands], {PATH: this.BUILD_PATH})).output;
     }
 
     async d8(commands: string[]) {
@@ -332,7 +354,7 @@ class AndroidBuildShell {
                     code
                 };
             } else {
-                const errorString = td.decode(rawError);
+                const errorString = td.decode(rawError)+td.decode(rawOutput);
                 console.log(colors.red(cmd[0]), errorString);
                 return {
                     status: false,

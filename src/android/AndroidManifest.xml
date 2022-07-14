@@ -6,7 +6,7 @@
         android:label="Sheriff Kingdom"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".MainActivity" android:label="MapsActivity">
+        <activity android:name=".MainActivity" android:label="SheriffKingdom">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

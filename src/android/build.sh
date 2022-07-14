@@ -55,9 +55,10 @@ if [ ${#java_list} -gt 2 ]; then
 	[ -f "build/libs.jar" ] && jars+="build/libs.jar${SEP}"
 	jars+="$PLATFORM_DIR/android.jar"
 
-	java_list += " gen/com/msheriff/kingdom/R.java"
-	java_list = " gen/com/msheriff/kingdom/R.java"
+	java_list+=" gen/com/msheriff/kingdom/R.java"
+	#java_list=" gen/com/msheriff/kingdom/R.java"
 
+	# ERROR in his buid.sh --- NO inclusion of R.java
 	$CMD_JAVAC -classpath $jars -d build $java_list || exit
 	found_src=1
 fi
@@ -70,9 +71,16 @@ fi
 #	echo No project sources were found in the 'src' folder.
 #	exit
 #fi
-exit
+
+# echo $CMD_JAR 
+$CMD_JAR --create --file build/libs_r.jar -C 'build/' .
 
 echo Compiling classes into DEX bytecode...
+
+
+# system("$CMD_JAR --create --file build/libs.jar -C '$LIB_CLASS_DIR' .");
+# system("$CMD_D8 --intermediate build/libs.jar --classpath $PLATFORM_DIR/android.jar --output build");
+
 
 dex_list=""
 [ -f "build/libs.dex" ] && dex_list+=" build/libs.dex"
@@ -80,7 +88,10 @@ dex_list=""
 [ -f "build/kotlin.dex" ] && dex_list+=" build/kotlin.dex"
 class_list=""
 [ -d "build/$package_path" ] && class_list="build/$package_path/*"
+# $CMD_D8 --classpath $PLATFORM_DIR/android.jar $dex_list $class_list --output build || exit
 $CMD_D8 --classpath $PLATFORM_DIR/android.jar $dex_list $class_list --output build || exit
+
+exit
 
 echo Creating APK...
 
@@ -91,13 +102,16 @@ $TOOLS_DIR/aapt2 link -o build/unaligned.apk --manifest AndroidManifest.xml -I $
 
 # Pack the DEX file into a new APK file
 cd build
+# NOTE THAT we changed dir to build to ensure classes.dex is added to the root path of .apk (not build/...) it should be in root
 $CMD_7Z a -tzip unaligned.apk classes.dex > /dev/null
+# similar to aapt add (again we have to be cd'ed into dex/ or build/ or bin/ .dex and .apk should be in the same dir)
 cd ..
 
 for t in ${TARGET_ARCHES[@]}; do
 	if [ -d $t ]; then
 		$CMD_7Z a -tzip build/unaligned.apk $t > /dev/null
 		$CMD_7Z rn -tzip build/unaligned.apk $t lib/$t > /dev/null
+		# all the target arches should be in lib/??
 	fi
 done
 
