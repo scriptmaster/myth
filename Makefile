@@ -15,3 +15,6 @@ help:
 
 clean:
 	del /Q lib\js\*
+
+test2:
+	cp -R src/android/* builds/android/

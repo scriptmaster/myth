@@ -3,7 +3,9 @@ import { exec, OutputMode } from "https://deno.land/x/exec/mod.ts";
 import * as path from "https://deno.land/std@0.147.0/path/mod.ts";
 import { existsSync } from "https://deno.land/std@0.63.0/fs/exists.ts";
 import { ensureDirSync } from "https://deno.land/std/fs/mod.ts";
-//import { recursiveReaddir } from "https://deno.land/x/recursive_readdir/mod.ts";
+
+import { readableStreamFromReader, writableStreamFromWriter, } from "https://deno.land/std@0.148.0/streams/conversion.ts";
+import { mergeReadableStreams } from "https://deno.land/std@0.148.0/streams/merge.ts";
 
 export async function buildAndroid(buildDir: string, keyStoreFile: string, storepass: string) {
     try {
@@ -25,10 +27,12 @@ export async function buildAndroid(buildDir: string, keyStoreFile: string, store
         await sh.outputClassesDex();
         await sh.addDexToApk();
 
+        await sh.alignApk();
+
         await sh.checkOrCreateKeyStore(keyStoreFile); // android-myth
         await sh.jarsigner(keyStoreFile, storepass);
-        await sh.createApk();
-        
+        await sh.checkApk();
+
         console.log('Built within '+(Math.ceil(new Date().getTime() - buildStart) / 1000)+' seconds '+String.fromCodePoint(0x1F44F));
     } catch(e) {
         console.error(e);
@@ -101,7 +105,7 @@ class AndroidBuildShell {
         this.PLATFORM_TOOLS = path.join(this.ANDROID_SDK, 'platforms-tools');
         this.ANDROID_JAR    = path.join(this.PLATFORM_PATH, 'android.jar');
 
-        console.log(this.BUILD_TOOLS);
+        // console.log('BUILD_TOOLS: ', this.BUILD_TOOLS);
 
         console.log(colors.gray('ANDROID_SDK='+this.ANDROID_SDK));
         console.log(`BUILD_TOOLS_VERSION: ${colors.yellow(this.BUILD_TOOLS_VERSION)}, PLATFORM_VERSION: ${colors.yellow(this.PLATFORM_VERSION)}`);
@@ -133,7 +137,7 @@ class AndroidBuildShell {
         p.push('-F', this.UNALIGNED_NAME);
 
         await this.aapt(p);
-        await this.aapt(['list', this.UNALIGNED_NAME]);
+        // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
     async addDexToApk() {
@@ -141,7 +145,7 @@ class AndroidBuildShell {
         await this.aapt([
             'add', this.UNALIGNED_NAME, 'classes.dex'
         ]);
-        console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
+        // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
     async checkOrCreateKeyStore(keyStoreFile: string) {
@@ -169,8 +173,11 @@ class AndroidBuildShell {
         }
     }
 
-    async createApk() {
+    async alignApk() {
         await this.zipalign(this.UNALIGNED_NAME, this.APK_NAME);
+    }
+
+    async checkApk() {
         const apk = path.join(this.cwd, this.APK_NAME);
         if(existsSync(apk)) {
             const stat = await Deno.stat(apk);
@@ -190,7 +197,7 @@ class AndroidBuildShell {
             'jarsigner',
             '-keystore', name,
             '-storepass', storepass,
-            path.relative(keyStoreDir, path.join(this.cwd, this.UNALIGNED_NAME)),
+            path.relative(keyStoreDir, path.join(this.cwd, this.APK_NAME)),
             name
         ];
         // console.log(cmd.join(' '));
@@ -339,4 +346,33 @@ class AndroidBuildShell {
             return { status: false, output: e, code: e.code };
         }
     }
+
+
+    async aapt2(cmd: string[], env?: {[key: string]: string}) {
+        // create the file to attach the process to
+        const file = await Deno.open("./aapt2.log", {
+            read: true,
+            write: true,
+            create: true,
+        });
+        const fileWriter = await writableStreamFromWriter(file);
+
+        // start the process //
+        const process = Deno.run({
+            cmd: cmd,
+            env: env,
+            cwd: env?.cwd || this.cwd,
+            stdout: "piped",
+            stderr: "piped",
+        });
+
+        // example of combining stdout and stderr while sending to a file
+        const stdout = readableStreamFromReader(process.stdout);
+        const stderr = readableStreamFromReader(process.stderr);
+        const joined = mergeReadableStreams(stdout, stderr);
+
+        // returns a promise that resolves when the process is killed/closed
+        joined.pipeTo(fileWriter).then(() => console.log("pipe join done"));
+    }
+
 }
