@@ -14,11 +14,11 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
         ensureDirSync(buildDir);
         const paddleYml = 'paddle.yml';
 
-        console.log(colors.brightBlue(`Starting android build: ${paddleYml}`), buildDir);
-        const buildStart = new Date().getTime();
-
         const yaml = Deno.readTextFileSync(path.join(srcDir, paddleYml));
         const config: AndroidBuildConfig = await parseYaml(yaml) as AndroidBuildConfig;
+
+        console.log(colors.brightBlue(`Starting android build: ${paddleYml} (type: ${config.type})`), buildDir);
+        const buildStart = new Date().getTime();
 
         if(!config.src_dir) config.src_dir = srcDir;
         if(!config.build_dir) config.build_dir = buildDir;
@@ -77,6 +77,7 @@ function getSourceFiles(dir: string, filter = /\.java$/) {
 
 
 interface AndroidBuildConfig {
+    type: 'app' | 'lib' | 'multi_builds' | 'builds' | 'android_builds';
     apk_name: string;
     deps: string[];
 

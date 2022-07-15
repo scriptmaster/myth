@@ -1,4 +1,4 @@
-type: app
+type: app # lib
 
 apk_name: sheriff_kingdom
 
