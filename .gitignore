@@ -1,5 +1,6 @@
 builds/
 dist/
+.ref
 .tests/
 .vscode/
 **/.build
