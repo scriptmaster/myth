@@ -563,7 +563,8 @@ async function build(opts:any = {}) {
 			case 'spa':
 				await bundleWeb('mithril'); break;
 			case 'android':
-				await buildAndroid(copybuild('android'), config.android.keystore, config.android.storepass);
+				// await buildAndroid(copybuild('android'), config.android.keystore, config.android.storepass);
+				await buildAndroid(root('android'), config.android.keystore, config.android.storepass);
 				break;
 			case 'html':
 			case 'www':

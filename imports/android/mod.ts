@@ -3,18 +3,27 @@ import { exec, OutputMode } from "https://deno.land/x/exec/mod.ts";
 import * as path from "https://deno.land/std@0.147.0/path/mod.ts";
 import { existsSync } from "https://deno.land/std@0.63.0/fs/exists.ts";
 import { ensureDirSync } from "https://deno.land/std/fs/mod.ts";
+import { parse as parseYaml } from "https://deno.land/std@0.63.0/encoding/yaml.ts";
 
 import { readableStreamFromReader, writableStreamFromWriter, } from "https://deno.land/std@0.148.0/streams/conversion.ts";
 import { mergeReadableStreams } from "https://deno.land/std@0.148.0/streams/merge.ts";
 
-export async function buildAndroid(buildDir: string, keyStoreFile: string, storepass: string) {
+export async function buildAndroid(srcDir: string, keyStoreFile: string, storepass: string) {
     try {
+        const buildDir = path.join(srcDir, '.build');
+        ensureDirSync(buildDir);
         console.log(colors.brightBlue('Starting android build:'), buildDir);
         const buildStart = new Date().getTime();
 
-        const sh = new AndroidBuildShell();
-        sh.cwd = buildDir;
-        // sh.setDir(buildDir);
+        const yaml = Deno.readTextFileSync(path.join(srcDir, 'android.yml'));
+        const config: AndroidBuildConfig = await parseYaml(yaml);
+
+        if(!config.src_dir) config.src_dir = srcDir;
+        if(!config.build_dir) config.build_dir = buildDir;
+        const sh = new AndroidBuildShell(config);
+
+        // sh.srcDir = srcDir;
+        // sh.buildDir = buildDir;
 
         // console.log(Deno.env.toObject());
 
@@ -24,10 +33,15 @@ export async function buildAndroid(buildDir: string, keyStoreFile: string, store
         // sh.aapt(['version']);
         await sh.generateResources();
 
-        await sh.compileClasses('obj/');
+        const compilationStatus = await sh.compileClasses('obj/');
+        if(!compilationStatus) return console.log(colors.red('Please correct the above code errors and retry android build.'));
+
         await sh.outputClassesDex('obj/');
 
         await sh.addDexToApk('classes.dex');
+
+        // await sh.downloadDeps('deps.txt');
+        await sh.downloadDeps();
 
         await sh.alignApk();
 
@@ -52,6 +66,16 @@ function getSourceFiles(dir: string, filter = /\.java$/) {
     return files;
 }
 
+
+interface AndroidBuildConfig {
+    apk_name: string;
+    deps: string[];
+
+    src_dir: string;
+    build_dir: string;
+    // deps_test: string[];
+}
+
 class AndroidBuildShell {
     ANDROID_SDK:        string;
     BUILD_TOOLS_VERSION:string = '30.0.3';
@@ -62,11 +86,12 @@ class AndroidBuildShell {
     TOOLS:              string = '';
     TOOLS_BIN:          string = '';
 
-    cwd:                string = '';
+    srcDir:             string = '';
+    buildDir:           string = '';
 
     BUILD_PATH  = '';
     // PATH_DX  = 'dx';
-    PATH_DX     = 'd8';
+    D8     = 'd8';
     // ENV_PATH_SEP    = ':'; // *nix, for windows it is ;
     ANDROID_JAR = '';
 
@@ -74,25 +99,24 @@ class AndroidBuildShell {
     APK_NAME = '';
 
     //DEX_DIR = 'bin';
+    isWindows = Deno.build.os == 'windows';
 
-    constructor() {
+    config: AndroidBuildConfig;
+
+    constructor(buildConfig: AndroidBuildConfig) {
+        this.config = buildConfig;
+
+        this.srcDir = buildConfig.src_dir;
+        this.buildDir = buildConfig.build_dir;
+        this.APK_NAME = (buildConfig.apk_name || 'signed') + '.apk';
+
         this.ANDROID_SDK = Deno.env.get("ANDROID_SDK") || '';
         if(!this.ANDROID_SDK) throw 'Please set ANDROID_SDK in path and retry build';
 
         const PATH = Deno.env.get('PATH') || '';
         const JAVA_HOME = Deno.env.get('JAVA_HOME') || '';
 
-        switch(Deno.build.os) {
-            case 'windows':
-                this.PATH_DX = 'd8.bat'; // check if file exists
-                break;
-            case 'linux':
-                // 
-                break;
-            case 'darwin':
-                // 
-                break;
-        }
+        if(this.isWindows) this.D8 = 'd8.bat';
 
         this.BUILD_TOOLS    = path.join(this.ANDROID_SDK, 'build-tools', this.BUILD_TOOLS_VERSION);
         this.BUILD_PATH     = this.BUILD_TOOLS + path.delimiter + path.join(JAVA_HOME, 'bin');
@@ -107,24 +131,32 @@ class AndroidBuildShell {
         //console.log(colors.yellow('BUILD_TOOLS='+this.BUILD_TOOLS));
         //console.log(colors.yellow('PLATFORM_PATH='+this.PLATFORM_PATH));
 
-        this.APK_NAME = 'signed.apk';
         // this.APK_NAME = 'release.apk';
     }
 
-    ensuredir(dir: string) { try { ensureDirSync(path.join(this.cwd, dir)); } catch(e) { if(e.code != "EEXIST") { throw e; } } return dir; };
+    ensuredir(dir: string) { try { ensureDirSync(path.join(this.buildDir, dir)); } catch(e) { if(e.code != "EEXIST") { throw e; } } return dir; };
 
     async generateResources() {
         //$ aapt package -m -J gen/ -M ./AndroidManifest.xml -S res1/ -S res2 ... -I android.jar
         const generated = 'gen/';
+        const genPath = path.join(this.buildDir, generated);
+
+        if(existsSync(genPath)) Deno.removeSync(genPath, { recursive: true });
         this.ensuredir(generated);
-        // ensuredir(path.join(this.cwd, 'bin/'));
+
+        // const resourcesDir = path.relative(this.buildDir, path.join(this.srcDir, 'res'));
+        const relativePath = path.relative(this.buildDir, this.srcDir);
+        // console.log(relativePath, path.join(relativePath, 'AndroidManifest.xml'), path.join(relativePath, 'res'));
+
+        const unalignedFilePath = path.join(this.buildDir, this.UNALIGNED_NAME);
+        if(existsSync(unalignedFilePath)) Deno.removeSync(unalignedFilePath, { recursive: true });
 
         var p = [];
         p.push('package');
         p.push('-m');
         p.push('-J', generated);
-        p.push('-M', './AndroidManifest.xml');
-        p.push('-S', 'res');
+        p.push('-M', path.join(relativePath, 'AndroidManifest.xml'));
+        p.push('-S', path.join(relativePath, 'res/'));
         // p.push('-S', 'res2/');
         p.push('-I', this.ANDROID_JAR);
 
@@ -138,9 +170,10 @@ class AndroidBuildShell {
 
     async addDexToApk(dexFile: string) {
         //$ aapt add 
-        const dexFilePath = path.join(this.cwd, dexFile); // Add any relative paths
+        const dexFilePath = path.join(this.buildDir, dexFile); // Add any relative paths
         const dexCwd = path.dirname(dexFilePath);
-        const unalignedFile = path.relative(dexCwd, path.join(this.cwd, this.UNALIGNED_NAME));
+        const unalignedFilePath = path.join(this.buildDir, this.UNALIGNED_NAME);
+        const unalignedFile = path.relative(dexCwd, unalignedFilePath);
 
         // console.log(dexCwd, this.cwd, unalignedFile, dexFilePath);
 
@@ -148,6 +181,65 @@ class AndroidBuildShell {
             'add', unalignedFile, path.basename(dexFile)
         ], '');
         // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
+    }
+
+    cacheDir = '.cache/';
+    async downloadDeps() {   // depsFile: string = 'deps') {
+        // const depsPath = path.join(this.srcDir, depsFile);
+        // const depsList = Deno.readTextFileSync(depsPath).split(this.isWindows? '\r\n': '\n');
+        const depsList = this.config.deps || [];
+        if(!depsList.length) return;
+
+        const cacheDir = path.join(this.buildDir, this.cacheDir);
+        ensureDirSync(cacheDir);
+
+        for (const dep of depsList) {
+            if (!dep || !/\w+\:/.test(dep)) continue;
+            const [ lib, name, version ] = dep.replace(/ /g, ':').split(':');
+            if (existsSync(path.join(cacheDir, `${name}-${version}.aar`)) || existsSync(path.join(cacheDir, `${name}-${version}.jar`))) continue
+
+            console.log(colors.magenta(`Downloading ${name}-${version} from package ${lib}`));
+            //const match = dep.match(/(implementation)?\s+\'?(\w+[\: ]\w+[\: ]\'?)
+            await this.downloadFromMavenRepo(lib, name, version, cacheDir);
+        }
+    }
+
+    // "https://dl.google.com/dl/android/maven2"
+    // "https://maven.google.com"
+    mavenRepoUrl = "https://dl.google.com/dl/android/maven2";
+    async downloadFromMavenRepo(lib: string, name: string, version: string, toDir: string) {
+        
+        const urlPrefix = `${this.mavenRepoUrl}/${lib.replace(/\./g, '/')}/${name}/${version}/${name}-${version}`;
+
+        if (await this.downloadFile(urlPrefix + '.aar', toDir)) return true;
+
+        console.error(colors.gray(`Could not download ${urlPrefix}.aar   Trying for .jar`));
+        if (await this.downloadFile(urlPrefix + '.jar', toDir)) return true;
+
+        console.error(colors.red(`Could not download ${urlPrefix}.aar or .jar`));
+        return false;
+    }
+
+    async downloadFile(url: string, dir: string) {
+        try {
+            const name = path.basename(url);
+            const filePath = path.join(dir, name);
+
+            const res = await fetch(url);
+
+            if (!res.ok) return false;
+
+            const file = await Deno.open(filePath, { create: true, write: true });
+
+            await res.body?.pipeTo(file.writable);
+
+            try { file.close(); } catch(e) { }
+            // try { Deno.writeTextFileSync(path.join(dir, 'downloads.log'), `[${new Date().toLocaleString()}] ${url}\n`, { append: true }) } catch(e) { }
+        } catch(e) {
+            console.error('downloadFileToCache: ', e);
+            return false;
+        }
+        return true;
     }
 
     async checkOrCreateKeyStore(keyStoreFile: string) {
@@ -180,7 +272,7 @@ class AndroidBuildShell {
     }
 
     async checkApk() {
-        const apk = path.join(this.cwd, this.APK_NAME);
+        const apk = path.join(this.buildDir, this.APK_NAME);
         if(existsSync(apk)) {
             const stat = await Deno.stat(apk);
             // console.log(String.fromCodePoint(0x1F44B) colors.green("APK BUILT: "+this.APK_NAME));
@@ -199,7 +291,7 @@ class AndroidBuildShell {
             'jarsigner',
             '-keystore', name,
             '-storepass', storepass,
-            path.relative(keyStoreDir, path.join(this.cwd, file)),
+            path.relative(keyStoreDir, path.join(this.buildDir, file)),
             name
         ];
         // console.log(cmd.join(' '));
@@ -212,11 +304,17 @@ class AndroidBuildShell {
         // ensuredir(path.join(this.cwd, 'bin/'));
         this.ensuredir(output);
 
-        const sourceFiles = getSourceFiles(this.cwd, /\.java$/).map(f => path.relative(this.cwd, f));
+        const sourceFiles = getSourceFiles(this.srcDir, /\.java$/).map(f => path.relative(this.buildDir, f));
         // console.log('sourceFiles:', sourceFiles);
 
-        await this.javac([
-            '-classpath', this.ANDROID_JAR,
+        const jars = [
+            this.ANDROID_JAR
+        ];
+        // converted .jars (from extracted classes.jar and rewritten R.java values)
+        // jars.push(path.join(this.buildDir, '.cache/jars/appcompat-1.4.1.jar'))
+
+        const compilation = await this.javac([
+            '-classpath', jars.join(this.isWindows? ';': ':'),
             // '-sourcepath', sourcepath, // 'gen;java'
             '-d', output,
             //'-target', '1.7',
@@ -225,14 +323,8 @@ class AndroidBuildShell {
             // 'java/com/msheriff/kingdom/MainActivity.java',
             ...sourceFiles
         ]);
-    }
 
-    async getPackages() {
-        // 
-    }
-
-    async downloadAARorJAR() {
-        // 
+        return compilation.status;
     }
 
     async outputClassesDex(input: string) {
@@ -241,7 +333,7 @@ class AndroidBuildShell {
         // $(D8) --output classes.dex input-file1 input-file2
         // this.ensuredir(this.DEX_DIR);
 
-        const classFiles = getSourceFiles(path.join(this.cwd, input), /\.class$/).map(f => path.relative(this.cwd, f));
+        const classFiles = getSourceFiles(path.join(this.buildDir, input), /\.class$/).map(f => path.relative(this.buildDir, f));
         // console.log(classFiles);
 
         await this.d8([
@@ -266,7 +358,7 @@ class AndroidBuildShell {
         this.rename('classes.dex', name+'.dex');
     }
 
-    rename(oldir: string, newdir: string) { return Deno.renameSync(path.join(this.cwd, oldir), path.join(this.cwd, newdir)); }
+    rename(oldir: string, newdir: string) { return Deno.renameSync(path.join(this.buildDir, oldir), path.join(this.buildDir, newdir)); }
 
     devices() { return this.adb('devices'); }
 
@@ -275,12 +367,14 @@ class AndroidBuildShell {
     }
 
     async javac(commands: string[]) {
-        return `javac ${commands[0]}:\n` + (await this.run(['javac', ...commands], {PATH: this.BUILD_PATH})).output;
+        // console.log(['javac', ...commands].join(' '));
+        return await this.run(['javac', ...commands], {PATH: this.BUILD_PATH});
     }
 
-    async dx(commands: string[]) {
-        return 'dx: ' + (await this.run([this.PATH_DX, ...commands], {PATH: this.BUILD_PATH})).output;
-    }
+    // dx is deprecated. use d8 (r8.d8 like r2.d2 android :)
+    // async dx(commands: string[]) {
+    //     return 'dx: ' + (await this.run([this.PATH_DX, ...commands], {PATH: this.BUILD_PATH})).output;
+    // }
 
     async jar(commands: string[]) {
         return 'jar: ' + (await this.run(['jar', ...commands], {PATH: this.BUILD_PATH})).output;
@@ -340,7 +434,7 @@ class AndroidBuildShell {
             const p = Deno.run({
                 cmd: cmd,
                 env: env,
-                cwd: env?.cwd || this.cwd,
+                cwd: env?.cwd || this.buildDir,
                 stdout: "piped",
                 stderr: "piped",
             });
@@ -389,7 +483,7 @@ class AndroidBuildShell {
         const process = Deno.run({
             cmd: cmd,
             env: env,
-            cwd: env?.cwd || this.cwd,
+            cwd: env?.cwd || this.buildDir,
             stdout: "piped",
             stderr: "piped",
         });

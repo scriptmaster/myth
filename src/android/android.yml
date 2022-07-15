@@ -1,0 +1,10 @@
+apk_name: sheriff_kingdom
+
+deps:
+  - androidx.appcompat:appcompat:1.4.1
+  - com.google.android.material:material:1.6.0
+  - androidx.constraintlayout:constraintlayout:2.1.4
+  - androidx.navigation:navigation-fragment:2.3.5
+  - androidx.navigation:navigation-ui:2.3.5
+
+deps_test:
