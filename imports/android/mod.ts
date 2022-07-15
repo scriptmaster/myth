@@ -50,8 +50,15 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
         await sh.checkOrCreateKeyStore(keyStoreFile); // android-myth
         await sh.jarsigner(sh.APK_NAME, keyStoreFile, storepass);
         await sh.checkApk();
-
+        // Congrats :) 
+        //******************************************************
         console.log('Built within '+(Math.ceil(new Date().getTime() - buildStart) / 1000)+' seconds '+String.fromCodePoint(0x1F44F));
+        //******************************************************
+        //******************************************************
+
+        
+        await sh.checkAdbInstall();
+
     } catch(e) {
         console.error(e);
     }
@@ -271,6 +278,24 @@ class AndroidBuildShell {
 
     async alignApk() {
         await this.zipalign(this.UNALIGNED_NAME, this.APK_NAME);
+    }
+
+    async checkAdbInstall() {
+        // const adbInstall = confirm("Skip adb install?");
+        // if(!adbInstall) return;
+
+        const devices = await this.adb('devices');
+        // console.log(devices.output);
+
+        if (devices.output) {
+            const [header, firstDevice] = devices.output.split('\n');
+            if(firstDevice) {
+                console.log(`adb device found: ${firstDevice}`);
+                const [match, device] = firstDevice.match(/^(\S+)\s/);
+                // console.log(`adb -s ${device} install`);
+                console.log(colors.blue((await this.adb(`-s ${device} install ${this.APK_NAME}`)).output));
+            }
+        }
     }
 
     async checkApk() {

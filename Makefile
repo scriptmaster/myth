@@ -10,6 +10,9 @@ build:
 android:
 	deno run -A myth-cli.ts build android
 
+adb-install:
+	deno run -A myth-cli.ts install android
+
 help:
 	deno run -A myth-cli.ts help
 
