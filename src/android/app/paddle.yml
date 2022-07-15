@@ -4,8 +4,8 @@ apk_name: sheriff_kingdom
 
 # these are the other libs and apps to be built.  should be built and linked before building app
 libs:
-  - app2
-  - lib2
+  - myapp2
+  - mylib2
 
 deps:
   - androidx.appcompat:appcompat:1.4.1

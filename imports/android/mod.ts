@@ -1,15 +1,19 @@
 import { colors } from "https://deno.land/x/cliffy@v0.24.2/ansi/colors.ts";
-import { exec, OutputMode } from "https://deno.land/x/exec/mod.ts";
 import * as path from "https://deno.land/std@0.147.0/path/mod.ts";
 import { existsSync } from "https://deno.land/std@0.63.0/fs/exists.ts";
 import { ensureDirSync } from "https://deno.land/std/fs/mod.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.63.0/encoding/yaml.ts";
+// import { exec, OutputMode } from "https://deno.land/x/exec/mod.ts";
 
 import { readableStreamFromReader, writableStreamFromWriter, } from "https://deno.land/std@0.148.0/streams/conversion.ts";
 import { mergeReadableStreams } from "https://deno.land/std@0.148.0/streams/merge.ts";
 
 export async function buildAndroid(srcDir: string, keyStoreFile: string, storepass: string) {
     try {
+        if(!existsSync(path.join(srcDir, 'AndroidManifest.xml'))) return console.error('1 of 3] Need AndroidManifest.xml file in '+srcDir);
+        if(!existsSync(path.join(srcDir, 'java/'))) return console.error('2 of 3] Need java/ dir in '+srcDir);
+        if(!existsSync(path.join(srcDir, 'res/'))) return console.error('3 of 3] Need res/ in '+srcDir);
+
         const buildDir = path.join(srcDir, '.build');
         ensureDirSync(buildDir);
         const paddleYml = 'paddle.yml';
@@ -442,19 +446,19 @@ class AndroidBuildShell {
         return 'avdmanager: ' + (await this.run(['avdmanager', ...commands], {PATH: this.TOOLS_BIN}));
     }
 
-    async exec(cmd: string, p: string[] = []) {
-        cmd = cmd + ' ' + p.join(' ');
-        console.log(colors.brightYellow('exec: ' + cmd));
-        const output = await exec(cmd, {
-            output: OutputMode.Capture
-        });
-        // console.log(output.status.success, output.output);
-        if (output.status.success) {
-            console.log(colors.green(output.output));
-        } else {
-            console.log(colors.red('error:'), output.status.code, cmd, output.output);
-        }
-    }
+    // async exec(cmd: string, p: string[] = []) {
+    //     cmd = cmd + ' ' + p.join(' ');
+    //     console.log(colors.brightYellow('exec: ' + cmd));
+    //     const output = await exec(cmd, {
+    //         output: OutputMode.Capture
+    //     });
+    //     // console.log(output.status.success, output.output);
+    //     if (output.status.success) {
+    //         console.log(colors.green(output.output));
+    //     } else {
+    //         console.log(colors.red('error:'), output.status.code, cmd, output.output);
+    //     }
+    // }
 
     async run(cmd: string[], env?: {[key: string]: string}) {
         try {

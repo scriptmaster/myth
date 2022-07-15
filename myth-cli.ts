@@ -630,7 +630,7 @@ async function startWebServer(opts:any) {
 await new Command()
 .name("myth")
 .description("A modern component-based frontend tool to build single page apps without node_modules folder.")
-.version("v1.0.1")
+.version("v1.0.2")
 .option("-w, --watch", "To start a dev server and watch for changes in source directory", { default: true, })
 .option("-c, --config [myth.json]", "The config file to use.", { default: configFileName, })
 .option("-p, --port <port:number>", "The port number for the local server.", { default: 5000, })

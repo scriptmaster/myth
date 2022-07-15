@@ -1,2 +1,6 @@
 type: multi_builds
 main: app
+builds:
+ - app
+ - lib2
+ - lib3
