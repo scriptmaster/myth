@@ -12,11 +12,13 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
     try {
         const buildDir = path.join(srcDir, '.build');
         ensureDirSync(buildDir);
-        console.log(colors.brightBlue('Starting android build:'), buildDir);
+        const paddleYml = 'paddle.yml';
+
+        console.log(colors.brightBlue(`Starting android build: ${paddleYml}`), buildDir);
         const buildStart = new Date().getTime();
 
-        const yaml = Deno.readTextFileSync(path.join(srcDir, 'android.yml'));
-        const config: AndroidBuildConfig = await parseYaml(yaml);
+        const yaml = Deno.readTextFileSync(path.join(srcDir, paddleYml));
+        const config: AndroidBuildConfig = await parseYaml(yaml) as AndroidBuildConfig;
 
         if(!config.src_dir) config.src_dir = srcDir;
         if(!config.build_dir) config.build_dir = buildDir;

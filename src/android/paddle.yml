@@ -8,3 +8,7 @@ deps:
   - androidx.navigation:navigation-ui:2.3.5
 
 deps_test:
+
+uses:
+  - android
+  - butter_paddle
