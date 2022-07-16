@@ -6,7 +6,7 @@ Download From Github Releases page:
 
 Coming from a strong C#.NET and writing my own js-minifier-bundler in the pre-jquery days (Internet Explorer 6), my recent Frontend accomplishments include fullframeworks than libraries. React (17 in production) AngularJS (8 in production), Angular(12 in production) and Vue (4 in production)
 - I've also tried React, Blazor.net, ReactJS.NET, Svelte, SolidJS, Marko, Elm, Flutter-Web, and all of them depended on node_modules or produce large bundles.
-- If not node_modules, they produced LARGE bundle size: 400KB to 1MB just for a simple Hello.
+- If not node_modules, they produced LARGE bundle size: 400KB to 1MB just for a simple Hello. deno package manager caches imported modules cleanly and does not add to the local project disk space.
 - Plus there were issues about SSR, SSG and backend framework integration.
 - Oh the CICD needs to be fast also.
 
