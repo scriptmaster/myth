@@ -1,6 +1,9 @@
-all: build install
+all: compile install
 
-build:
+run: 
+	deno run -A paddle.ts
+
+compile:
 	deno compile -A --unstable paddle.ts
 
 install:

@@ -33,6 +33,10 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
 
         // console.log(Deno.env.toObject());
 
+        // await sh.downloadDeps('deps.txt');
+        await sh.downloadDeps();
+        await sh.extractDeps(); // keep it ready for generating Resources
+
         // sh.exec('echo', ['hi']);
         // await exec('echo Hi there');
         // sh.devices();
@@ -46,8 +50,6 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
 
         await sh.addDexToApk('classes.dex');
 
-        // await sh.downloadDeps('deps.txt');
-        await sh.downloadDeps();
 
         await sh.alignApk();
 
@@ -88,6 +90,7 @@ interface AndroidBuildConfig {
     src_dir: string;
     build_dir: string;
     // deps_test: string[];
+    local_lib: string;
 }
 
 class AndroidBuildShell {
@@ -197,6 +200,8 @@ class AndroidBuildShell {
         // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
+    async isOnline() { try { return (await fetch('https://captive.apple.com')).ok; } catch(e) { } return false; }
+
     cacheDir = '.cache/';
     async downloadDeps() {   // depsFile: string = 'deps') {
         // const depsPath = path.join(this.srcDir, depsFile);
@@ -207,28 +212,69 @@ class AndroidBuildShell {
         const cacheDir = path.join(this.buildDir, this.cacheDir);
         ensureDirSync(cacheDir);
 
+        let isOnline = await this.isOnline();
+        // console.debug('local_lib: ', local_lib);
+
         for (const dep of depsList) {
             if (!dep || !/\w+\:/.test(dep)) continue;
             const [ lib, name, version ] = dep.replace(/ /g, ':').split(':');
-            if (existsSync(path.join(cacheDir, `${name}-${version}.aar`)) || existsSync(path.join(cacheDir, `${name}-${version}.jar`))) continue
+            if (existsSync(path.join(cacheDir, `${name}-${version}.aar`)) || existsSync(path.join(cacheDir, `${name}-${version}.jar`))) continue;
 
             console.log(colors.magenta(`Downloading ${name}-${version} from package ${lib}`));
-            //const match = dep.match(/(implementation)?\s+\'?(\w+[\: ]\w+[\: ]\'?)
-            await this.downloadFromMavenRepo(lib, name, version, cacheDir);
+            if (isOnline) {
+                try { await this.downloadFromRepos(lib, name, version, cacheDir); } catch(e) { isOnline = false; }
+            } else {
+                if(!this.locaLibPath) this.locaLibPath = this.resolveLocalLib();
+                const file = path.join(this.locaLibPath, `${name}-${version}`);
+                if(existsSync(file + '.jar')) {
+                    Deno.copyFileSync(file + '.jar', path.join(cacheDir, `${name}-${version}.jar`));
+                    console.log('Copyied from local lib: ', `${name}-${version}.jar`, this.locaLibPath);
+                }
+                if(existsSync(file + '.aar')) {
+                    Deno.copyFileSync(file + '.aar', path.join(cacheDir, `${name}-${version}.aar`));
+                    console.log('Copyied from local lib: ', `${name}-${version}.jar`, this.locaLibPath);
+                }
+            }
         }
     }
 
-    // "https://dl.google.com/dl/android/maven2"
-    // "https://maven.google.com"
-    mavenRepoUrl = "https://dl.google.com/dl/android/maven2";
-    async downloadFromMavenRepo(lib: string, name: string, version: string, toDir: string) {
-        
-        const urlPrefix = `${this.mavenRepoUrl}/${lib.replace(/\./g, '/')}/${name}/${version}/${name}-${version}`;
+    locaLibPath = '';
+    resolveLocalLib() {
+        if(this.config.local_lib) {
+            if (this.config.local_lib.startsWith('.')) return path.resolve(this.config.local_lib)
+            else return this.config.local_lib;
+        }
+        const homeDir = (this.isWindows? Deno.env.get('USERPROFILE'): Deno.env.get('HOME')) || '';
+        return path.join(homeDir, 'lib');
+    }
 
+    googleRepoUrl = "https://dl.google.com/dl/android/maven2";
+    mavenRepoUrl  = "https://maven.google.com";
+    // jcenterUrl    = "https://";
+    github    = "https://raw.githubusercontent.com/scriptmaster/cdn/packages"; // In packages branch, upload file-version.aar under lib
+
+    async downloadFromRepos(lib: string, name: string, version: string, toDir: string) {
+        const pkg = lib.replace(/\./g, '/');
+
+        // try: Google Repo
+        var urlPrefix = `${this.googleRepoUrl}/${pkg}/${name}/${version}/${name}-${version}`;
         if (await this.downloadFile(urlPrefix + '.aar', toDir)) return true;
-
-        console.error(colors.gray(`Could not download ${urlPrefix}.aar   Trying for .jar`));
         if (await this.downloadFile(urlPrefix + '.jar', toDir)) return true;
+
+        // try: Maven Repo
+        urlPrefix = `${this.mavenRepoUrl}/${pkg}/${name}/${version}/${name}-${version}`;
+        if (await this.downloadFile(urlPrefix + '.aar', toDir)) return true;
+        if (await this.downloadFile(urlPrefix + '.jar', toDir)) return true;
+
+        // try: github scriptmaster cdn
+        urlPrefix = `${this.github}/${lib}/${name}-${version}`;
+        if (await this.downloadFile(urlPrefix + '.aar', toDir)) return true;
+        if (await this.downloadFile(urlPrefix + '.jar', toDir)) return true;
+
+        // // try: jCenter
+        // urlPrefix = `${this.jcenterUrl}/${pkg}/${name}/${version}/${name}-${version}`;
+        // if (await this.downloadFile(urlPrefix + '.aar', toDir)) return true;
+        // if (await this.downloadFile(urlPrefix + '.jar', toDir)) return true;
 
         console.error(colors.red(`Could not download ${urlPrefix}.aar or .jar`));
         return false;
@@ -240,8 +286,7 @@ class AndroidBuildShell {
             const filePath = path.join(dir, name);
 
             const res = await fetch(url);
-
-            if (!res.ok) return false;
+            if (res.status != 200) return false;
 
             const file = await Deno.open(filePath, { create: true, write: true });
 
@@ -254,6 +299,37 @@ class AndroidBuildShell {
             return false;
         }
         return true;
+    }
+
+    async extractDeps() {
+        // deps
+        try {
+            const cacheDir = path.join(this.buildDir, this.cacheDir);
+            const clsDir = 'cls';
+            const aarDir = 'aar';
+            ensureDirSync(path.join(cacheDir, clsDir));
+            ensureDirSync(path.join(cacheDir, aarDir));
+
+            const files = Deno.readDirSync(cacheDir);
+            for (const f of files) {
+                if (!f.isFile) continue;
+                if (f.name.endsWith('.jar')) {
+                    // check if already extrated? (cached)
+                    if (existsSync(path.join(cacheDir, clsDir + '/' + f.name))) continue;
+                    // extract .jar files
+                    await this.unzip(cacheDir, f.name, ['*'], clsDir + '/' + f.name)
+                } else if (f.name.endsWith('.aar')) {
+                    // check if already extrated? (cached)
+                    if (existsSync(path.join(cacheDir, aarDir + '/' + f.name))) continue;
+                    // extract .aar files
+                    await this.unzip(cacheDir, f.name,
+                        "'res/**/*' classes.jar R.txt AndroidManifest.xml".split(' '),
+                        aarDir + '/' + f.name);
+                }
+            }
+        } catch(e) {
+            // 
+        }
     }
 
     async checkOrCreateKeyStore(keyStoreFile: string) {
@@ -428,6 +504,11 @@ class AndroidBuildShell {
             'zipalign', '-f', '4',
             unaligned, aligned
         ], {PATH: this.BUILD_PATH})).output;
+    }
+
+    async unzip(curDir: string, zipfile: string, files: string[] = [], outdir: string = '') {
+        // return (await this.run(['unzip', path.join(curDir, zipfile), '-d', path.join(curDir, outdir)], {PATH: this.BUILD_PATH})).output;
+        return (await this.run(['unzip', zipfile, ...files, '-d', outdir], {PATH: this.BUILD_PATH, cwd: curDir})).output;
     }
 
     async adb(commands: string) {

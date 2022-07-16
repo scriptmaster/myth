@@ -78,7 +78,7 @@ function startBuild(ymlFile: string, paddle: ButterPaddle) {
 await new Command()
 .name("butter_paddle")
 .description("A modern and fast build tool for android projects without gradle[w]/bazel/buck/ant")
-.version("v1.0.1")
+.version("v1.0.2")
 .option("-c, --config [paddle.yml]", "Alternative: butter_paddle.yml", { default: 'paddle.yml' })
 .action(async (opts) => {
     const paddle = readConfig(opts);
@@ -88,6 +88,7 @@ await new Command()
         console.log('Multi builds paddle: ', paddleYml);
         if (paddle.builds) {
             for (const b of paddle.builds) {
+                if (paddle.main && b == paddle.main) continue; // don't build main project twice; wait for all the other projects to finish build.
                 const projectYml = path.join(cwd, b, 'paddle.yml');
                 if(existsSync(projectYml)) {
                     startBuild(projectYml, paddle);

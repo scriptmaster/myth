@@ -4,3 +4,5 @@ builds:
  - app
  - lib2
  - lib3
+keystore: ..\..\android.keystore
+storepass: android-myth

@@ -13,9 +13,15 @@ deps:
   - androidx.constraintlayout:constraintlayout:2.1.4
   - androidx.navigation:navigation-fragment:2.3.5
   - androidx.navigation:navigation-ui:2.3.5
+  # - com.tools.android:script:master
 
 deps_test:
 
 uses:
   - android
   - butter_paddle
+
+keystore: ..\..\..\android.keystore
+storepass: android-myth
+
+# local_lib: ..\..\..\lib
