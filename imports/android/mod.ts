@@ -239,7 +239,7 @@ class AndroidBuildShell {
         }
     }
 
-    locaLibPath = '';
+    locaLibPath = ''; //
     resolveLocalLib() {
         if(this.config.local_lib) {
             if (this.config.local_lib.startsWith('.')) return path.resolve(this.config.local_lib)

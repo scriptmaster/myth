@@ -8,3 +8,6 @@ compile:
 
 install:
 	cp -R paddle.exe ~/.deno/bin/paddle.exe
+
+watch:
+	watchexec -e ts make
