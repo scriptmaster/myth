@@ -43,7 +43,7 @@ Focus on functionality than performance.  Issues around these are addressed very
 Support required.
 
 # IOS build
-This is not planned at the moment.  May be in the future
+This is not planned at the moment.  May be in the future. Contributors welcome.
 
 # Versions:
 deno 1.23.3 (release, x86_64-pc-windows-msvc)
