@@ -22,6 +22,6 @@ uses:
   - butter_paddle
 
 keystore: ..\..\..\android.keystore
-storepass: android-myth
+# storepass: android-myth
 
 # local_lib: ..\..\..\lib
