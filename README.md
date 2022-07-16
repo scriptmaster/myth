@@ -25,9 +25,9 @@ I checked out mithril.js and it is pretty fast for both framework size and depen
 
 Ownership
 --
-Another reason is ownership. Flutter and Angular are owned by Google.  This repo is owned by the me and any future contributors. If you contribute to this development, and send valid pull requests, your name will be added here.  Contributors welcome.
+Another reason is ownership. Flutter and Angular are owned by Google.  See how ryandahl has created a name for himself for both node.js and deno?  Gradle and other plugins are owned by third-party.  This repo is owned by the me and any future contributors. If you contribute to this development, and your pull requests are merged, your name will be added here.  Contributors welcome.
 
-### License: Proprietary. Owned by me and future contributors only
+### License: Proprietary. Owned by me and future contributors only.
 
 # Android build
 This is in active development.  Although flutter does a great work in creating fast and feature-rich android builds, there are still improvements that can be made.
