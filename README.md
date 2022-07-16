@@ -4,9 +4,9 @@ Download From Github Releases page:
 
 # Why Yet Another Frontend framework
 
-Coming from a strong C#.NET and writing my own js-minifier-bundler in the pre-jquery days (Internet Explorer 6), my Frontend accomplishments have been with Fullframeworks like AngularJS, Angular and Vue.
+Coming from a strong C#.NET and writing my own js-minifier-bundler in the pre-jquery days (Internet Explorer 6), my recent Frontend accomplishments include fullframeworks than libraries. React (17 in production) AngularJS (8 in production), Angular(12 in production) and Vue (4 in production)
 - I've also tried React, Blazor.net, ReactJS.NET, Svelte, SolidJS, Marko, Elm, Flutter-Web, and all of them depended on node_modules or produce large bundles.
-- If not node_modules, they produced LARGE bundle size: 400KB to 1MB just for a simple Hello.
+- If not node_modules, they produced LARGE bundle size: 400KB to 1MB just for a simple Hello. deno package manager caches imported modules cleanly and does not add to the local project disk space.
 - Plus there were issues about SSR, SSG and backend framework integration.
 - Oh the CICD needs to be fast also.
 
@@ -23,10 +23,27 @@ Design Goals:
 
 I checked out mithril.js and it is pretty fast for both framework size and dependencies.
 
+Ownership
+--
+Another reason is ownership. Flutter and Angular are owned by Google.  See how ryandahl has created a name for himself for both node.js and deno?  Gradle and other plugins are owned by hans and 500+ contributors.  This repo is owned by me and any future contributors. If you contribute to this development, and your pull requests are merged, your name will be added here.  Contributors welcome.
+
+### License: Proprietary. Owned by me and future contributors only.
 
 # Android build
+This is in active development.  Although flutter does a great work in creating fast and feature-rich android builds, there are still improvements that can be made.
+
+paddle is a deno alternative for gradle.
+
+With butter_paddle, you could create android apps fast with only web technologies.  No need to learn dart or yet another language.  Only learn the framework and functional parts to build apps fast.
+
+## Focus on delivery than tinkering.
+Focus on functionality than performance.  Issues around these are addressed very fast in this repo.  This repo is actively maintained.
+
+## Support
+Support required.
+
 # IOS build
-This is not planned at the moment.  May be in the future
+This is not planned at the moment.  May be in the future. Contributors welcome.
 
 # Versions:
 deno 1.23.3 (release, x86_64-pc-windows-msvc)
