@@ -27,6 +27,8 @@ Ownership
 --
 Another reason is ownership. Flutter and Angular are owned by Google.  This repo is owned by the me and any future contributors. If you contribute to this development, and send valid pull requests, your name will be added here.  Contributors welcome.
 
+### License: Proprietary. Owned by me and future contributors only
+
 # Android build
 This is in active development.  Although flutter does a great work in creating fast and feature-rich android builds, there are still improvements that can be made.
 
