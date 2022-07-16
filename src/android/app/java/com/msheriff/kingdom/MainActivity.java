@@ -5,13 +5,16 @@ import android.os.Bundle;
 import android.widget.TextView;
 import android.view.Window;
 
+//import androidx.appcompat.app.AppCompatActivity;
+
 public class MainActivity extends Activity {
+//public class MainActivity extends AppCompatActivity {
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     super.onCreate(savedInstanceState);
-    // setContentView(R.layout.activity_main);
+    setContentView(R.layout.activity_main);
 
     TextView textView = new TextView(this);
     // String text = getResources().getString("Stuff");
@@ -20,6 +23,7 @@ public class MainActivity extends Activity {
     setContentView(textView);
   }
 }
+
 /*
  * import android.app.Activity;
  * import android.content.res.Resources;

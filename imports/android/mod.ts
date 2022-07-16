@@ -36,11 +36,8 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
         // await sh.downloadDeps('deps.txt');
         await sh.downloadDeps();
         await sh.extractDeps(); // keep it ready for generating Resources
+        // await sh.mergeResources();
 
-        // sh.exec('echo', ['hi']);
-        // await exec('echo Hi there');
-        // sh.devices();
-        // sh.aapt(['version']);
         await sh.generateResources();
 
         const compilationStatus = await sh.compileClasses('obj/');
@@ -50,10 +47,9 @@ export async function buildAndroid(srcDir: string, keyStoreFile: string, storepa
 
         await sh.addDexToApk('classes.dex');
 
-
         await sh.alignApk();
 
-        await sh.checkOrCreateKeyStore(keyStoreFile); // android-myth
+        await sh.checkOrCreateKeyStore(keyStoreFile);
         await sh.jarsigner(sh.APK_NAME, keyStoreFile, storepass);
         await sh.checkApk();
         // Congrats :) 
@@ -174,14 +170,28 @@ class AndroidBuildShell {
         p.push('-J', generated);
         p.push('-M', path.join(relativePath, 'AndroidManifest.xml'));
         p.push('-S', path.join(relativePath, 'res/'));
+
+        // try to add .aar/res to the aapt package tool?
         // p.push('-S', 'res2/');
+        console.debug('Adding lib resources:', '-S', '.cache/aar/*.aar/res/');
+        // p.push('-S', '.cache/aar/appcompat-1.4.1.aar/res/');
+        p.push('-S', '.cache/aar/navigation-fragment-2.3.5.aar/res/'); // 
+        // p.push('-S', '.cache/aar/material-1.6.0.aar/res/'); // 
+        // p.push('-S', '.cache/aar/constraintlayout-2.1.4.aar/res/'); // 
+
         p.push('-I', this.ANDROID_JAR);
 
         // aapt package -m -J gen/ -M ./AndroidManifest.xml -S res/ -I android.jar -F bin/resources.ap_
         // p.push('-F', 'bin/resources.ap_');
+        p.push('--auto-add-overlay');
         p.push('-F', this.UNALIGNED_NAME);
 
-        await this.aapt(p);
+        const aapt = await this.aapt(p);
+        if (!aapt.status) {
+            return Deno.exit();
+        }
+        console.log('Done');
+        return;
         // console.log(await this.aapt(['list', this.UNALIGNED_NAME]));
     }
 
@@ -342,8 +352,8 @@ class AndroidBuildShell {
             const cmd = [
                 'keytool',
                 '-genkey', '-v',
-                '-keystore', name, // 'android-myth.keystore',
-                '-alias', name, // 'android-myth',
+                '-keystore', name,
+                '-alias', name,
                 '-keyalg', 'RSA',
                 '-keysize', '2048',
                 '-validity', '10000',
@@ -367,13 +377,12 @@ class AndroidBuildShell {
         // if(!adbInstall) return;
 
         const devices = await this.adb('devices');
-        // console.log(devices.output);
-
         if (devices.output) {
-            const [header, firstDevice] = devices.output.split('\n');
-            if(firstDevice) {
+            let [header, firstDevice] = devices.output.split('\n');
+            if(firstDevice && firstDevice.trim()) {
+                firstDevice = firstDevice.trim();
                 console.log(`adb device found: ${firstDevice}`);
-                const [match, device] = firstDevice.match(/^(\S+)\s/);
+                const [match, device] = firstDevice.trim().match(/^(\S+)\s/);
                 // console.log(`adb -s ${device} install`);
                 console.log(colors.blue((await this.adb(`-s ${device} install ${this.APK_NAME}`)).output));
             }
@@ -473,7 +482,7 @@ class AndroidBuildShell {
     devices() { return this.adb('devices'); }
 
     async aapt(commands: string[], cwd: string = '') {
-        return `aapt ${commands[0]}:\n` + (await this.run(['aapt', ...commands], {PATH: this.BUILD_PATH, cwd })).output;
+        return await this.run(['aapt', ...commands], {PATH: this.BUILD_PATH, cwd });
     }
 
     async javac(commands: string[]) {

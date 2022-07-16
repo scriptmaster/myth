@@ -14,6 +14,10 @@ import { Application } from "https://deno.land/x/abc@v1.3.3/mod.ts";
 import Babel from "https://esm.sh/@babel/standalone@7.18.8";
 // import * as minifyPreset from 'https://esm.sh/babel-preset-minify@0.5.2';
 import { default as babelMinify } from 'https://esm.sh/babel-minify@0.5.2';
+// https://deno.land/x/swc@0.2.1 ??
+// import { parse, print } from "https://deno.land/x/swc@0.2.1/mod.ts";
+// const ast = parse(code, { target: "es2019", syntax: "typescript", comments: false });
+
 // import * as Terser from "https://esm.sh/terser@5.7.1";
 import { buildAndroid } from "./imports/android/mod.ts";
 import { buildSEOPages } from "./imports/html/mod.ts";
@@ -51,7 +55,7 @@ const defaultConfig = {
     //generate_templates: ["razor_pages", "html"]
 	android: {
 		keystore: 'android.keystore',
-		storepass: 'android-myth'
+		storepass: ''
 	}
 };
 
@@ -332,7 +336,6 @@ class ${name} {
 // const embedCode = (compCode || '').replace(/^\s*export\s*}\s*$/, 'EMBED CODE');
 // const rgx1 = /^\s*export\s+default\s+class\s*\{\s*(.+?)\s*\}\s*$/;
 
-
 // const rgxExportDefaultNamedClassStart = () => new RegExp('export\s+default\s+class\s*(.+)?\{');
 // const rgxExportNamedClassStart = /export\s+default\s+class\s*(.+)?\{/;
 const stExportDefaultClassStart = (s:string) => `(export\\s+)?(default\\s+)?class\\s*(${s})?\{`;
@@ -463,7 +466,6 @@ async function installFile(name: string, urls: {[key:string]: string} = config.i
 function babelTransformHtml(html: string, pragma = 'h', pragmaFragment = 'Fragment') { return (Babel.transform(html, { presets: [['react', {pragma: pragma, pragmaFrag: pragmaFragment}], ], }).code || ''); /*.replace(/;$/, '');*/ }
 function babelTransform(html: string, pragma = 'h', pragmaFragment = 'Fragment') { return babelTransformMinify(babelTransformHtml('<>'+html+'</>', pragma, pragmaFragment)) }
 function babelTransformMinify(code: string) { return babelMinify(code, { mangle: { keepClassName: true, }, }).code; }
-// async function terserMinify(code: string) {  const output = await Terser.minify(code);  return output.code;  }
 
 
 /*

@@ -32,6 +32,6 @@
 
     "android": {
         "keystore": "android.keystore",
-        "storepass": "android-myth"
+        "storepass": ""
     }
 }
