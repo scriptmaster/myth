@@ -228,11 +228,12 @@ class AndroidBuildShell {
                 const file = path.join(this.locaLibPath, `${name}-${version}`);
                 if(existsSync(file + '.jar')) {
                     Deno.copyFileSync(file + '.jar', path.join(cacheDir, `${name}-${version}.jar`));
-                    console.log('Copyied from local lib: ', `${name}-${version}.jar`, this.locaLibPath);
-                }
-                if(existsSync(file + '.aar')) {
+                    console.log('Copied from local lib: ', `${name}-${version}.jar`, this.locaLibPath);
+                } else if(existsSync(file + '.aar')) {
                     Deno.copyFileSync(file + '.aar', path.join(cacheDir, `${name}-${version}.aar`));
-                    console.log('Copyied from local lib: ', `${name}-${version}.jar`, this.locaLibPath);
+                    console.log('Copied from local lib: ', `${name}-${version}.jar`, this.locaLibPath);
+                } else {
+                    console.error(colors.red('Could not download and could not find in local lib: ' + `${name}-${version}`), this.locaLibPath);
                 }
             }
         }
