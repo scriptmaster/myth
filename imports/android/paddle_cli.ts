@@ -32,11 +32,10 @@ function writeNewConfig() {
     Deno.writeTextFileSync(paddleYml,
 `type: app
 apk_name: app.apk
-libs:
- - 
 deps:
  - androidx.appcompat:appcompat:1.4.1
  - com.google.android.material:material:1.6.0
+ # - libproject1
 `);
 }
 
@@ -70,6 +69,7 @@ function installBuildDeps(deps: string[]) {
     // download and write to config
     // Not implemented
 }
+
 
 function startBuild(ymlFile: string, paddle: ButterPaddle) {
     buildAndroid(path.dirname(ymlFile), paddle.keystore || '', paddle.storepass || '');
