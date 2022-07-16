@@ -25,6 +25,18 @@ I checked out mithril.js and it is pretty fast for both framework size and depen
 
 
 # Android build
+This is in active development.  Although flutter does a great work in creating fast and feature-rich android builds, there are still improvements that can be made.
+
+paddle is a deno alternative for gradle.
+
+With butter_paddle, you could create android apps fast with only web technologies.  No need to learn dart or yet another language.  Only learn the framework and functional parts to build apps fast.
+
+## Focus on delivery than tinkering.
+Focus on functionality than performance.  Issues around these are addressed very fast in this repo.  This repo is actively maintained.
+
+## Support
+Support required.
+
 # IOS build
 This is not planned at the moment.  May be in the future
 
