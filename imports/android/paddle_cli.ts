@@ -78,7 +78,7 @@ function startBuild(ymlFile: string, paddle: ButterPaddle) {
 await new Command()
 .name("butter_paddle")
 .description("A modern and fast build tool for android projects without gradle[w]/bazel/buck/ant")
-.version("v1.0.2")
+.version("v1.0.3")
 .option("-c, --config [paddle.yml]", "Alternative: butter_paddle.yml", { default: 'paddle.yml' })
 .action(async (opts) => {
     const paddle = readConfig(opts);

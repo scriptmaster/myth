@@ -16,7 +16,7 @@ public class MainActivity extends Activity {
     TextView textView = new TextView(this);
     // String text = getResources().getString("Stuff");
 
-    textView.setText("Welcome to my kingdom");
+    textView.setText("Sheriff: Welcome to my kingdom");
     setContentView(textView);
   }
 }

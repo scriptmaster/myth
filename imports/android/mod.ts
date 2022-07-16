@@ -396,6 +396,7 @@ class AndroidBuildShell {
     async jarsigner(file: string, keyStoreFile: string, storepass: string) {
         const keyStoreDir = path.dirname(keyStoreFile);
         const name = path.basename(keyStoreFile);
+        if (!storepass) storepass = prompt("Enter storepass:") || '';
         const cmd = [
             'jarsigner',
             '-keystore', name,
